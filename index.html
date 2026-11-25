@@ -1,1 +1,228 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIGMAX 3D - Free Fire Style</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Segoe UI', sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #090d16; color: white; }
+        #game-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+        /* লবি UI */
+        #lobby-ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 14px 20px;
+        }
+        .pointer { pointer-events: auto; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; }
+        .profile {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(15, 23, 42, 0.82); padding: 6px 15px 6px 6px;
+            border-radius: 8px; border-left: 4px solid #f97316;
+        }
+        .avatar {
+            width: 36px; height: 36px; background: linear-gradient(45deg, #f97316, #ef4444);
+            border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900;
+        }
+        .top-right { display: flex; gap: 10px; align-items: center; }
+        .curr-box {
+            background: rgba(15, 23, 42, 0.85); padding: 6px 14px; border-radius: 20px;
+            font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.15);
+        }
+        .sound-btn {
+            background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8;
+            padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer;
+        }
+        .sound-btn.muted { border-color: #ef4444; color: #ef4444; }
+
+        .left-panel { display: flex; flex-direction: column; gap: 10px; width: 135px; }
+        .card-btn {
+            background: linear-gradient(135deg, #f97316, #dc2626); padding: 10px;
+            border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .bottom-bar { display: flex; justify-content: space-between; align-items: flex-end; }
+        .menu-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+        .m-btn {
+            background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.25);
+            color: white; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;
+        }
+        .m-btn.active { background: #f97316; color: white; border-color: #f97316; }
+        .start-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .mode-tag {
+            background: rgba(15, 23, 42, 0.85); padding: 5px 14px; border-radius: 5px;
+            font-size: 12px; color: #facc15; border: 1px solid #facc15; font-weight: bold;
+        }
+        .start-btn {
+            background: linear-gradient(90deg, #facc15, #f97316); color: #0f172a;
+            border: none; padding: 14px 46px; font-size: 22px; font-weight: 900;
+            border-radius: 8px; cursor: pointer; box-shadow: 0 0 22px rgba(249, 115, 22, 0.7);
+        }
+
+        /* ম্যাচ UI */
+        #match-ui {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 20; pointer-events: none;
+        }
+        .match-top {
+            display: flex; justify-content: space-between; padding: 12px 20px; align-items: center;
+        }
+        .stat-pill {
+            background: rgba(0, 0, 0, 0.65); padding: 7px 14px; border-radius: 6px;
+            font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.15);
+        }
+        .hp-bar-wrap {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 240px; text-align: center;
+        }
+        .hp-bg { width: 100%; height: 12px; background: rgba(0,0,0,0.7); border-radius: 6px; overflow: hidden; border: 1px solid #fff; }
+        #hp-fill { width: 100%; height: 100%; background: #22c55e; transition: 0.2s; }
+        .crosshair {
+            position: absolute; top: 50%; left: 50%; width: 22px; height: 22px;
+            transform: translate(-50%, -50%); border: 2px solid rgba(255, 255, 255, 0.85);
+            border-radius: 50%; pointer-events: none;
+        }
+        .crosshair::after {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+            background: #ef4444; transform: translate(-50%, -50%); border-radius: 50%;
+        }
+
+        #joystick-zone {
+            position: absolute; bottom: 25px; left: 25px; width: 120px; height: 120px;
+            background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%; pointer-events: auto; touch-action: none;
+        }
+        #joystick-knob {
+            position: absolute; top: 35px; left: 35px; width: 50px; height: 50px;
+            background: rgba(249, 115, 22, 0.85); border-radius: 50%;
+        }
+        .action-btns {
+            position: absolute; bottom: 25px; right: 25px; display: flex; gap: 15px; align-items: flex-end;
+            pointer-events: auto;
+        }
+        .act-btn {
+            width: 56px; height: 56px; border-radius: 50%; background: rgba(15, 23, 42, 0.75);
+            border: 2px solid rgba(255,255,255,0.4); color: white; font-weight: bold; font-size: 12px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .fire-btn {
+            width: 78px; height: 78px; border-radius: 50%; background: rgba(239, 68, 68, 0.88);
+            border: 3px solid #fca5a5; color: white; font-weight: 900; font-size: 15px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        #end-screen {
+            display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.85);
+            z-index: 30; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container"></div>
+
+    <!-- লবি UI -->
+    <div id="lobby-ui">
+        <div class="top-bar">
+            <div class="profile pointer">
+                <div class="avatar">FF</div>
+                <div>
+                    <div style="font-size:13px; font-weight:bold;">FF_LEGEND</div>
+                    <div style="font-size:11px; color:#fb923c;">LVL 65 • HEROIC</div>
+                </div>
+            </div>
+            <div class="top-right pointer">
+                <div class="curr-box">🪙 <span id="coin-txt">32,500</span></div>
+                <div class="curr-box">💎 <span id="dia-txt">1,250</span></div>
+                <button class="sound-btn" id="sound-toggle" onclick="toggleSound()">🔊 SOUND ON</button>
+            </div>
+        </div>
+
+        <div class="left-panel pointer">
+            <div class="card-btn" onclick="cycleOutfit()">👕 FF OUTFIT<br><span id="outfit-label" style="font-size:10px;color:#fef08a">CRIMSON HOODIE</span></div>
+            <div class="card-btn" style="background:linear-gradient(135deg,#0284c7,#1d4ed8)" onclick="cycleWeapon()">🔫 SWITCH GUN<br><span id="gun-name" style="font-size:10px;color:#bae6fd">AK47</span></div>
+        </div>
+
+        <div class="bottom-bar">
+            <div class="menu-btns pointer">
+                <button class="m-btn active">LOBBY</button>
+                <button class="m-btn" onclick="cycleOutfit()">CHARACTER</button>
+                <button class="m-btn" onclick="cycleWeapon()">WEAPON</button>
+            </div>
+            <div class="start-wrap pointer">
+                <div class="mode-tag">BR-RANKED • BERMUDA 3D</div>
+                <button class="start-btn" onclick="startMatch()">START</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ম্যাচ UI -->
+    <div id="match-ui">
+        <div class="match-top">
+            <div class="stat-pill">ALIVE: <span id="alive-count" style="color:#facc15">6</span> | KILLS: <span id="kill-count" style="color:#ef4444">0</span></div>
+            <div class="stat-pill">🔫 <span id="hud-gun">AK47</span> | AMMO: <span id="ammo-count">30</span>/∞</div>
+            <button class="m-btn pointer" style="background:#ef4444; border:none;" onclick="backToLobby()">EXIT</button>
+        </div>
+
+        <div class="crosshair"></div>
+
+        <div class="hp-bar-wrap">
+            <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">HP <span id="hp-text">100</span>/100</div>
+            <div class="hp-bg"><div id="hp-fill"></div></div>
+        </div>
+
+        <div id="joystick-zone"><div id="joystick-knob"></div></div>
+
+        <div class="action-btns">
+            <div class="act-btn" onclick="toggleScope()">SCOPE</div>
+            <div class="act-btn" onclick="jumpPlayer()">JUMP</div>
+            <div class="fire-btn" ontouchstart="fireBullet()" onclick="fireBullet()">FIRE</div>
+        </div>
+    </div>
+
+    <!-- ম্যাচ শেষ স্ক্রিন -->
+    <div id="end-screen">
+        <h1 id="end-title" style="font-size: 44px; color: #facc15; text-shadow: 0 0 20px #f97316;">BOOYAH!</h1>
+        <p id="end-stats" style="font-size: 18px;">Kills: 0</p>
+        <button class="start-btn" onclick="backToLobby()">BACK TO LOBBY</button>
+    </div>
+
+    <script>
+        // --- Web Audio সাউন্ড ইঞ্জিন ---
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function toggleSound() {
+            initAudio();
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('sound-toggle');
+            btn.innerText = soundEnabled ? '🔊 SOUND ON' : '🔇 MUTED';
+            btn.classList.toggle('muted', !soundEnabled);
+            if (soundEnabled) playClickSound();
+        }
+
+        function playClickSound() {
+            if (!soundEnabled) return;
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(720, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(420, audioCtx.currentTime + 0.07);
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.07); 
