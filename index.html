@@ -1,312 +1,609 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SIGMAX - Battle Royale Web</title>
+    <title>SIGMAX 3D - Battle Royale</title>
+    <!-- Three.js CDN (3D গ্রাফিক্সের জন্য) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Segoe UI', sans-serif; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #090d16; color: white; }
+        #game-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+        /* লবি UI */
+        #lobby-ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 14px 20px;
         }
-        body, html {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #0f172a;
-            color: white;
-        }
-        /* লবি ব্যাকগ্রাউন্ড (Sigmax Style) */
-        #lobby-screen {
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at center, #3b4280 0%, #1e2246 65%, #111329 100%);
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 12px 20px;
-        }
-        /* পেছনের বড় জানালা / ভিউ */
-        .lobby-window {
-            position: absolute;
-            top: 12%;
-            left: 15%;
-            width: 70%;
-            height: 62%;
-            background: linear-gradient(180deg, #7dd3fc 0%, #bae6fd 50%, #e0f2fe 100%);
-            border-radius: 60px;
-            border: 8px solid #2e3468;
-            box-shadow: inset 0 0 40px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.5);
-            overflow: hidden;
-            z-index: 1;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-        }
-        .city-bg {
-            width: 100%;
-            height: 70%;
-            background: linear-gradient(to top, #6366f1, #a5b4fc);
-            clip-path: polygon(0 100%, 0 40%, 15% 40%, 15% 20%, 30% 20%, 30% 50%, 50% 30%, 70% 50%, 70% 15%, 85% 15%, 85% 45%, 100% 35%, 100% 100%);
-            opacity: 0.7;
-        }
-        .banner-text {
-            position: absolute;
-            top: 20px;
-            left: 40px;
-            font-size: 28px;
-            font-weight: 900;
-            color: rgba(255,255,255,0.6);
-            letter-spacing: 3px;
-            transform: skewX(-10deg);
-        }
-        /* টপ বার */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 10;
-        }
-        .profile-box {
-            display: flex;
-            align-items: center;
-            background: rgba(15, 23, 42, 0.75);
-            padding: 6px 15px 6px 6px;
-            border-radius: 8px;
-            border-left: 4px solid #38bdf8;
-            gap: 10px;
+        .pointer { pointer-events: auto; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; }
+        .profile {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(15, 23, 42, 0.8); padding: 6px 15px 6px 6px;
+            border-radius: 8px; border-left: 4px solid #38bdf8;
         }
         .avatar {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(45deg, #ec4899, #8b5cf6);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
+            width: 36px; height: 36px; background: linear-gradient(45deg, #f43f5e, #8b5cf6);
+            border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold;
         }
-        .fps-badge {
-            background: rgba(0,0,0,0.6);
-            color: #4ade80;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        .currency-bar {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-        .currency {
-            background: rgba(15, 23, 42, 0.8);
-            padding: 5px 14px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            border: 1px solid rgba(255,255,255,0.15);
-        }
-        /* ক্যারেক্টার ক্যানভাস */
-        #character-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 5;
-            cursor: grab;
-        }
-        /* বাম পাশের মেনু */
-        .left-menu {
-            position: absolute;
-            left: 20px;
-            top: 22%;
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .event-card {
-            width: 110px;
-            height: 55px;
-            background: linear-gradient(135deg, #ec4899, #6366f1);
-            border-radius: 8px;
-            padding: 8px;
-            font-size: 11px;
-            font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.3);
-            cursor: pointer;
-        }
-        /* নিচের বার ও START বাটন */
-        .bottom-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            z-index: 10;
-        }
-        .nav-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        .nav-btn {
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: white;
-            padding: 10px 18px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .nav-btn:hover, .nav-btn.active {
-            background: #38bdf8;
-            color: #0f172a;
-        }
-        .start-section {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 8px;
-        }
-        .mode-box {
-            background: rgba(15, 23, 42, 0.85);
-            padding: 6px 16px;
-            border-radius: 6px;
-            font-size: 12px;
-            border: 1px solid #38bdf8;
-            color: #38bdf8;
-            font-weight: bold;
-        }
-        .start-btn {
-            background: linear-gradient(90deg, #facc15, #eab308);
-            color: #0f172a;
-            border: none;
-            padding: 14px 48px;
-            font-size: 22px;
-            font-weight: 900;
-            border-radius: 8px;
-            cursor: pointer;
-            box-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
-            letter-spacing: 1px;
-            transition: transform 0.1s;
-        }
-        .start-btn:active {
-            transform: scale(0.95);
+        .currencies { display: flex; gap: 12px; }
+        .curr-box {
+            background: rgba(15, 23, 42, 0.85); padding: 5px 14px; border-radius: 20px;
+            font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.15);
         }
 
-        /* গেম স্ক্রিন (Battle Mode) */
-        #game-screen {
-            display: none;
-            width: 100%;
-            height: 100%;
-            position: relative;
-            background: #1e293b;
+        .left-panel { display: flex; flex-direction: column; gap: 10px; width: 130px; }
+        .card-btn {
+            background: linear-gradient(135deg, #ec4899, #6366f1); padding: 10px;
+            border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
-        #game-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+
+        .bottom-bar { display: flex; justify-content: space-between; align-items: flex-end; }
+        .menu-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+        .m-btn {
+            background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.25);
+            color: white; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;
         }
-        .hud {
-            position: absolute;
-            top: 15px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
+        .m-btn.active { background: #38bdf8; color: #0f172a; }
+        .start-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .mode-tag {
+            background: rgba(15, 23, 42, 0.85); padding: 5px 14px; border-radius: 5px;
+            font-size: 12px; color: #38bdf8; border: 1px solid #38bdf8; font-weight: bold;
         }
-        .hud-box {
-            background: rgba(0,0,0,0.6);
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: bold;
+        .start-btn {
+            background: linear-gradient(90deg, #facc15, #eab308); color: #0f172a;
+            border: none; padding: 14px 46px; font-size: 22px; font-weight: 900;
+            border-radius: 8px; cursor: pointer; box-shadow: 0 0 20px rgba(250, 204, 21, 0.6);
         }
-        .exit-btn {
+
+        /* ম্যাচ (Battle) UI */
+        #match-ui {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 20; pointer-events: none;
+        }
+        .match-top {
+            display: flex; justify-content: space-between; padding: 12px 20px; align-items: center;
+        }
+        .stat-pill {
+            background: rgba(0, 0, 0, 0.65); padding: 7px 14px; border-radius: 6px;
+            font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.15);
+        }
+        .hp-bar-wrap {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 240px; text-align: center;
+        }
+        .hp-bg { width: 100%; height: 12px; background: rgba(0,0,0,0.7); border-radius: 6px; overflow: hidden; border: 1px solid #fff; }
+        #hp-fill { width: 100%; height: 100%; background: #22c55e; transition: 0.2s; }
+        .crosshair {
+            position: absolute; top: 50%; left: 50%; width: 22px; height: 22px;
+            transform: translate(-50%, -50%); border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%; pointer-events: none;
+        }
+        .crosshair::after {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+            background: #ef4444; transform: translate(-50%, -50%); border-radius: 50%;
+        }
+
+        /* কন্ট্রোলস */
+        #joystick-zone {
+            position: absolute; bottom: 25px; left: 25px; width: 120px; height: 120px;
+            background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%; pointer-events: auto; touch-action: none;
+        }
+        #joystick-knob {
+            position: absolute; top: 35px; left: 35px; width: 50px; height: 50px;
+            background: rgba(56, 189, 248, 0.8); border-radius: 50%;
+        }
+        .action-btns {
+            position: absolute; bottom: 25px; right: 25px; display: flex; gap: 15px; align-items: flex-end;
             pointer-events: auto;
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
         }
-        /* মোবাইল কন্ট্রোল */
-        .mobile-controls {
-            position: absolute;
-            bottom: 25px;
-            left: 25px;
-            right: 25px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
+        .act-btn {
+            width: 56px; height: 56px; border-radius: 50%; background: rgba(15, 23, 42, 0.75);
+            border: 2px solid rgba(255,255,255,0.4); color: white; font-weight: bold; font-size: 12px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
-        .dpad {
-            display: grid;
-            grid-template-columns: repeat(3, 45px);
-            gap: 5px;
-            pointer-events: auto;
+        .fire-btn {
+            width: 78px; height: 78px; border-radius: 50%; background: rgba(239, 68, 68, 0.85);
+            border: 3px solid #fca5a5; color: white; font-weight: 900; font-size: 15px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
         }
-        .ctrl-btn {
-            width: 45px;
-            height: 45px;
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.4);
-            border-radius: 50%;
-            color: white;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .shoot-btn {
-            width: 75px;
-            height: 75px;
-            background: rgba(239, 68, 68, 0.75);
-            border: 3px solid #fca5a5;
-            border-radius: 50%;
-            color: white;
-            font-weight: bold;
-            pointer-events: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        #end-screen {
+            display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.85);
+            z-index: 30; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
         }
     </style>
 </head>
 <body>
 
-    <!-- লবি স্ক্রিন -->
-    <div id="lobby-screen">
-        <div class="lobby-window">
-            <div class="banner-text">ALLSTAR // SIGMAX</div>
-            <div class="city-bg"></div>
+    <div id="game-container"></div>
+
+    <!-- লবি ইন্টারফেস -->
+    <div id="lobby-ui">
+        <div class="top-bar">
+            <div class="profile pointer">
+                <div class="avatar">SG</div>
+                <div>
+                    <div style="font-size:13px; font-weight:bold;">SIGMAX_HERO</div>
+                    <div style="font-size:11px; color:#38bdf8;">LVL 50 • GRANDMASTER</div>
+                </div>
+            </div>
+            <div class="currencies pointer">
+                <div class="curr-box">🪙 <span id="coin-txt">24,500</span></div>
+                <div class="curr-box">💎 <span id="dia-txt">850</span></div>
+            </div>
         </div>
 
-        <div class="top-bar">
-            <div style="display:flex; align-items:center;">
-                <div class="profile-box">
-                    <div class="avatar">SG</div>
-                    <div>
-                        <div style="font-size:13px; font-weight:bold;">PLAYER_ONE</div>
-                        <div style="font-size:11px; color:#94a3b8;">LVL 42 • PRO</div>
-                    </div>
-                </div>
-                <div class="fps-badge" id="fps-counter">60 FPS</div>
-            </div>
+        <div class="left-panel pointer">
+            <div class="card-btn" onclick="cycleOutfit()">👕 CHANGE<br>OUTFIT</div>
+            <div class="card-btn" style="background:linear-gradient(135deg,#0284c7,#1d4ed8)" onclick="cycleWeapon()">🔫 SWITCH<br>GUN (<span id="gun-name">AK47</span>)</div>
+        </div>
 
-            <div class="currency-bar">
-                <div class="currency">🪙 <span id="coins">15,400</span></div>
-                <div class="currency">💎 <span id="diamonds">520</span></div>
+        <div class="bottom-bar">
+            <div class="menu-btns pointer">
+                <button class="m-btn active">LOBBY</button>
+                <button class="m-btn" onclick="cycleOutfit()">CHARACTER</button>
+                <button class="m-btn" onclick="cycleWeapon()">WEAPON</button>
+            </div>
+            <div class="start-wrap pointer">
+                <div class="mode-tag">BR-RANKED • BERMUDA 3D</div>
+                <button class="start-btn" onclick="startMatch()">START</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ম্যাচ ইন্টারফেস -->
+    <div id="match-ui">
+        <div class="match-top">
+            <div class="stat-pill">ALIVE: <span id="alive-count" style="color:#facc15">6</span> | KILLS: <span id="kill-count" style="color:#ef4444">0</span></div>
+            <div class="stat-pill">🔫 <span id="hud-gun">AK47</span> | AMMO: <span id="ammo-count">30</span>/∞</div>
+            <button class="m-btn pointer" style="background:#ef4444; border:none;" onclick="backToLobby()">EXIT</button>
+        </div>
+
+        <div class="crosshair"></div>
+
+        <div class="hp-bar-wrap">
+            <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">HP <span id="hp-text">100</span>/100</div>
+            <div class="hp-bg"><div id="hp-fill"></div></div>
+        </div>
+
+        <div id="joystick-zone"><div id="joystick-knob"></div></div>
+
+        <div class="action-btns">
+            <div class="act-btn" onclick="toggleScope()">SCOPE</div>
+            <div class="act-btn" onclick="jumpPlayer()">JUMP</div>
+            <div class="fire-btn" ontouchstart="fireBullet()" onclick="fireBullet()">FIRE</div>
+        </div>
+    </div>
+
+    <!-- ম্যাচ শেষ স্ক্রিন -->
+    <div id="end-screen">
+        <h1 id="end-title" style="font-size: 42px; color: #facc15; text-shadow: 0 0 20px #eab308;">BOOYAH!</h1>
+        <p id="end-stats" style="font-size: 18px;">Kills: 5</p>
+        <button class="start-btn" onclick="backToLobby()">BACK TO LOBBY</button>
+    </div>
+
+    <script>
+        // --- 3D ইঞ্জিন সেটআপ ---
+        const container = document.getElementById('game-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x38bdf8);
+        scene.fog = new THREE.Fog(0x38bdf8, 30, 140);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 300);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        // লাইটিং
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+        dirLight.position.set(30, 50, 30);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // গেম স্টেট
+        let gameState = 'LOBBY'; // LOBBY বা MATCH
+        let outfitColors = [0x0284c7, 0xdc2626, 0x16a34a, 0x9333ea];
+        let outfitIdx = 0;
+        let weapons = [
+            { name: 'AK47', color: 0x1e293b, damage: 35, speed: 1.8 },
+            { name: 'AWM SNIPER', color: 0x15803d, damage: 100, speed: 3.0 }
+        ];
+        let weaponIdx = 0;
+
+        // --- 3D ক্যারেক্টার তৈরি ফাংশন ---
+        function createCharacter(shirtColor, isEnemy = false) {
+            const group = new THREE.Group();
+
+            // পা
+            const legGeo = new THREE.BoxGeometry(0.35, 1.1, 0.35);
+            const legMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
+            const leftLeg = new THREE.Mesh(legGeo, legMat);
+            leftLeg.position.set(-0.22, 0.55, 0);
+            const rightLeg = new THREE.Mesh(legGeo, legMat);
+            rightLeg.position.set(0.22, 0.55, 0);
+            group.add(leftLeg, rightLeg);
+
+            // বডি / জ্যাকেট
+            const bodyGeo = new THREE.BoxGeometry(0.85, 1.15, 0.45);
+            const bodyMat = new THREE.MeshLambertMaterial({ color: shirtColor });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 1.65;
+            body.castShadow = true;
+            group.add(body);
+
+            // মাথা
+            const headGeo = new THREE.BoxGeometry(0.52, 0.52, 0.52);
+            const headMat = new THREE.MeshLambertMaterial({ color: isEnemy ? 0xef4444 : 0xfed7aa });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 2.52;
+            group.add(head);
+
+            // ক্যাপ / হেলমেট
+            const capGeo = new THREE.BoxGeometry(0.56, 0.2, 0.62);
+            const capMat = new THREE.MeshLambertMaterial({ color: 0x0f172a });
+            const cap = new THREE.Mesh(capGeo, capMat);
+            cap.position.set(0, 2.8, 0.05);
+            group.add(cap);
+
+            // হাতে বন্দুক (Gun)
+            const gunGroup = new THREE.Group();
+            const gunBody = new THREE.Mesh(
+                new THREE.BoxGeometry(0.14, 0.2, 1.1),
+                new THREE.MeshLambertMaterial({ color: 0x111827 })
+            );
+            gunGroup.add(gunBody);
+            gunGroup.position.set(0.45, 1.75, 0.45);
+            group.add(gunGroup);
+
+            group.userData = { body, leftLeg, rightLeg, gunGroup };
+            return group;
+        }
+
+        // প্লেয়ার ক্যারেক্টার ও লবি প্ল্যাটফর্ম
+        const player = createCharacter(outfitColors[0]);
+        scene.add(player);
+
+        const lobbyPlatform = new THREE.Mesh(
+            new THREE.CylinderGeometry(2.2, 2.5, 0.3, 32),
+            new THREE.MeshLambertMaterial({ color: 0x1e293b })
+        );
+        lobbyPlatform.position.y = -0.15;
+        scene.add(lobbyPlatform);
+
+        // --- ম্যাচের 3D ম্যাপ (গ্রাউন্ড, ঘরবাড়ি, গাছ, কভার) ---
+        const worldGroup = new THREE.Group();
+        worldGroup.visible = false;
+        scene.add(worldGroup);
+
+        // সবুজ মাঠ
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(220, 220),
+            new THREE.MeshLambertMaterial({ color: 0x4ade80 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        worldGroup.add(ground);
+
+        // ঘরবাড়ি ও কভার বক্স তৈরি
+        const obstacles = [];
+        for (let i = 0; i < 35; i++) {
+            const isHouse = i % 3 === 0;
+            const w = isHouse ? 7 : 3;
+            const h = isHouse ? 5 : 2.5;
+            const d = isHouse ? 7 : 3;
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(w, h, d),
+                new THREE.MeshLambertMaterial({ color: isHouse ? 0xf59e0b : 0x64748b })
+            );
+            let rx = (Math.random() - 0.5) * 160;
+            let rz = (Math.random() - 0.5) * 160;
+            if (Math.abs(rx) < 12 && Math.abs(rz) < 12) rx += 20;
+            mesh.position.set(rx, h / 2, rz);
+            mesh.castShadow = true;
+            worldGroup.add(mesh);
+            obstacles.push(mesh);
+        }
+
+        // গাছপালা
+        for (let i = 0; i < 40; i++) {
+            const tree = new THREE.Group();
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 3), new THREE.MeshLambertMaterial({ color: 0x78350f }));
+            trunk.position.y = 1.5;
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(2.2, 4.5, 8), new THREE.MeshLambertMaterial({ color: 0x15803d }));
+            leaves.position.y = 4.5;
+            tree.add(trunk, leaves);
+            tree.position.set((Math.random() - 0.5) * 180, 0, (Math.random() - 0.5) * 180);
+            worldGroup.add(tree);
+        }
+
+        // --- লবি কন্ট্রোল ও কাস্টমাইজেশন ---
+        let isDragging = false, prevX = 0;
+        window.addEventListener('pointerdown', e => { isDragging = true; prevX = e.clientX; });
+        window.addEventListener('pointerup', () => isDragging = false);
+        window.addEventListener('pointermove', e => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - prevX;
+            prevX = e.clientX;
+            if (gameState === 'LOBBY') {
+                player.rotation.y += deltaX * 0.015;
+            } else if (gameState === 'MATCH') {
+                camYaw -= deltaX * 0.008;
+            }
+        });
+
+        function cycleOutfit() {
+            outfitIdx = (outfitIdx + 1) % outfitColors.length;
+            player.userData.body.material.color.setHex(outfitColors[outfitIdx]);
+        }
+
+        function cycleWeapon() {
+            weaponIdx = (weaponIdx + 1) % weapons.length;
+            document.getElementById('gun-name').innerText = weapons[weaponIdx].name;
+            document.getElementById('hud-gun').innerText = weapons[weaponIdx].name;
+        }
+
+        // --- ম্যাচ সিস্টেম ---
+        let enemies = [];
+        let bullets = [];
+        let playerHP = 100;
+        let kills = 0;
+        let camYaw = 0;
+        let isScoped = false;
+        let velocityY = 0;
+        let isGrounded = true;
+
+        // জয়স্টিক ভেরিয়েবল
+        let moveForward = 0, moveRight = 0;
+        const joyZone = document.getElementById('joystick-zone');
+        const joyKnob = document.getElementById('joystick-knob');
+
+        joyZone.addEventListener('touchmove', e => {
+            e.stopPropagation();
+            const rect = joyZone.getBoundingClientRect();
+            const touch = e.touches[0];
+            let dx = touch.clientX - (rect.left + 60);
+            let dy = touch.clientY - (rect.top + 60);
+            const dist = Math.min(40, Math.hypot(dx, dy));
+            const angle = Math.atan2(dy, dx);
+            joyKnob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+            moveRight = (Math.cos(angle) * dist) / 40;
+            moveForward = -(Math.sin(angle) * dist) / 40;
+        });
+
+        joyZone.addEventListener('touchend', () => {
+            joyKnob.style.transform = `translate(0px, 0px)`;
+            moveForward = 0; moveRight = 0;
+        });
+
+        // কিবোর্ড সাপোর্ট (PC এর জন্য)
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.code === 'Space') jumpPlayer();
+        });
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        function startMatch() {
+            gameState = 'MATCH';
+            document.getElementById('lobby-ui').style.display = 'none';
+            document.getElementById('match-ui').style.display = 'block';
+            document.getElementById('end-screen').style.display = 'none';
+
+            lobbyPlatform.visible = false;
+            worldGroup.visible = true;
+            player.position.set(0, 0, 0);
+            playerHP = 100;
+            kills = 0;
+            camYaw = 0;
+            updateHUD();
+
+            // পুরনো এনিমি পরিষ্কার করে ৫ জন নতুন 3D এনিমি স্পন করা
+            enemies.forEach(en => scene.remove(en.mesh));
+            enemies = [];
+            for (let i = 0; i < 5; i++) {
+                const enMesh = createCharacter(0x111827, true);
+                enMesh.position.set((Math.random() - 0.5) * 90, 0, (Math.random() - 0.5) * 90);
+                scene.add(enMesh);
+                enemies.push({ mesh: enMesh, hp: 100, shootTimer: Math.random() * 100 });
+            }
+        }
+
+        function backToLobby() {
+            gameState = 'LOBBY';
+            document.getElementById('lobby-ui').style.display = 'flex';
+            document.getElementById('match-ui').style.display = 'none';
+            document.getElementById('end-screen').style.display = 'none';
+            enemies.forEach(en => scene.remove(en.mesh));
+            enemies = [];
+            bullets.forEach(b => scene.remove(b.mesh));
+            bullets = [];
+            worldGroup.visible = false;
+            lobbyPlatform.visible = true;
+            player.position.set(0, 0, 0);
+            player.rotation.set(0, 0, 0);
+            camera.fov = 60;
+            camera.updateProjectionMatrix();
+        }
+
+        function jumpPlayer() {
+            if (isGrounded) {
+                velocityY = 0.28;
+                isGrounded = false;
+            }
+        }
+
+        function toggleScope() {
+            isScoped = !isScoped;
+            camera.fov = isScoped ? 30 : 60;
+            camera.updateProjectionMatrix();
+        }
+
+        function fireBullet() {
+            if (gameState !== 'MATCH') return;
+            const w = weapons[weaponIdx];
+            const bMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.15, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+            );
+            bMesh.position.copy(player.position);
+            bMesh.position.y += 1.7;
+
+            const dir = new THREE.Vector3(-Math.sin(camYaw), 0, -Math.cos(camYaw));
+            scene.add(bMesh);
+            bullets.push({ mesh: bMesh, dir: dir, speed: w.speed, damage: w.damage, isPlayer: true, life: 80 });
+        }
+
+        function updateHUD() {
+            document.getElementById('hp-text').innerText = Math.max(0, Math.floor(playerHP));
+            document.getElementById('hp-fill').style.width = Math.max(0, playerHP) + '%';
+            document.getElementById('kill-count').innerText = kills;
+            document.getElementById('alive-count').innerText = enemies.length + 1;
+        }
+
+        function showEndScreen(won) {
+            gameState = 'END';
+            document.getElementById('match-ui').style.display = 'none';
+            const endScr = document.getElementById('end-screen');
+            endScr.style.display = 'flex';
+            document.getElementById('end-title').innerText = won ? 'BOOYAH!' : 'ELIMINATED';
+            document.getElementById('end-title').style.color = won ? '#facc15' : '#ef4444';
+            document.getElementById('end-stats').innerText = `Total Kills: ${kills} | Earned +200 Coins`;
+            if (won) {
+                let c = document.getElementById('coin-txt');
+                c.innerText = (parseInt(c.innerText.replace(',', '')) + 200).toLocaleString();
+            }
+        }
+
+        // --- মেইন গেম লুপ ---
+        let walkCycle = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (gameState === 'LOBBY') {
+                camera.position.set(0, 2.2, 5.5);
+                camera.lookAt(0, 1.5, 0);
+            } else if (gameState === 'MATCH') {
+                // কিবোর্ড ইনপুট চেক
+                let f = moveForward, r = moveRight;
+                if (keys['w']) f = 1;
+                if (keys['s']) f = -1;
+                if (keys['a']) r = -1;
+                if (keys['d']) r = 1;
+
+                // প্লেয়ার মুভমেন্ট
+                if (f !== 0 || r !== 0) {
+                    const speed = 0.22;
+                    const forwardVec = new THREE.Vector3(-Math.sin(camYaw), 0, -Math.cos(camYaw));
+                    const rightVec = new THREE.Vector3(Math.cos(camYaw), 0, -Math.sin(camYaw));
+                    player.position.addScaledVector(forwardVec, f * speed);
+                    player.position.addScaledVector(rightVec, r * speed);
+                    player.rotation.y = camYaw + Math.PI;
+
+                    walkCycle += 0.25;
+                    player.userData.leftLeg.rotation.x = Math.sin(walkCycle) * 0.6;
+                    player.userData.rightLeg.rotation.x = -Math.sin(walkCycle) * 0.6;
+                } else {
+                    player.userData.leftLeg.rotation.x = 0;
+                    player.userData.rightLeg.rotation.x = 0;
+                }
+
+                // গ্র্যাভিটি ও জাম্প
+                player.position.y += velocityY;
+                if (player.position.y > 0) {
+                    velocityY -= 0.015;
+                } else {
+                    player.position.y = 0;
+                    velocityY = 0;
+                    isGrounded = true;
+                }
+
+                // থার্ড পারসন ক্যামেরা (Free Fire স্টাইল ডান কাঁধের পেছনে)
+                const camDist = isScoped ? 2.5 : 6.5;
+                const camOffset = new THREE.Vector3(
+                    Math.sin(camYaw) * camDist + Math.cos(camYaw) * 0.8,
+                    2.6,
+                    Math.cos(camYaw) * camDist - Math.sin(camYaw) * 0.8
+                );
+                camera.position.copy(player.position).add(camOffset);
+                const lookTarget = player.position.clone().add(new THREE.Vector3(-Math.sin(camYaw) * 10, 1.8, -Math.cos(camYaw) * 10));
+                camera.lookAt(lookTarget);
+
+                // এনিমি AI মুভমেন্ট ও শুটিং
+                enemies.forEach((en) => {
+                    const dist = en.mesh.position.distanceTo(player.position);
+                    en.mesh.lookAt(player.position.x, 0, player.position.z);
+                    if (dist > 14) {
+                        const dir = new THREE.Vector3().subVectors(player.position, en.mesh.position).normalize();
+                        en.mesh.position.addScaledVector(dir, 0.08);
+                    }
+                    en.shootTimer++;
+                    if (en.shootTimer > 110 && dist < 45) {
+                        en.shootTimer = 0;
+                        const eb = new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+                        eb.position.copy(en.mesh.position);
+                        eb.position.y += 1.6;
+                        const bDir = new THREE.Vector3().subVectors(player.position, en.mesh.position).normalize();
+                        scene.add(eb);
+                        bullets.push({ mesh: eb, dir: bDir, speed: 1.1, damage: 10, isPlayer: false, life: 80 });
+                    }
+                });
+
+                // বুলেট ও হিট ডিটেকশন
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    const b = bullets[i];
+                    b.mesh.position.addScaledVector(b.dir, b.speed);
+                    b.life--;
+
+                    let hit = false;
+                    if (b.isPlayer) {
+                        for (let j = enemies.length - 1; j >= 0; j--) {
+                            const en = enemies[j];
+                            if (b.mesh.position.distanceTo(en.mesh.position.clone().add(new THREE.Vector3(0, 1.5, 0))) < 1.3) {
+                                en.hp -= b.damage;
+                                hit = true;
+                                if (en.hp <= 0) {
+                                    scene.remove(en.mesh);
+                                    enemies.splice(j, 1);
+                                    kills++;
+                                    updateHUD();
+                                    if (enemies.length === 0) showEndScreen(true);
+                                }
+                                break;
+                            }
+                        }
+                    } else {
+                        if (b.mesh.position.distanceTo(player.position.clone().add(new THREE.Vector3(0, 1.5, 0))) < 1.1) {
+                            playerHP -= b.damage;
+                            hit = true;
+                            updateHUD();
+                            if (playerHP <= 0) showEndScreen(false);
+                        }
+                    }
+
+                    if (hit || b.life <= 0) {
+                        scene.remove(b.mesh);
+                        bullets.splice(i, 1);
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
