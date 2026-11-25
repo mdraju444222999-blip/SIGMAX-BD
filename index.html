@@ -1,228 +1,678 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SIGMAX 3D - Free Fire Style</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <title>RG GAMER 2.0 - Battle Royale</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Segoe UI', sans-serif; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #090d16; color: white; }
-        #game-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        html, body {
+            width: 100vw; height: 100vh; overflow: hidden;
+            background: #0b0f19; color: white; position: fixed; inset: 0;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
 
         /* লবি UI */
         #lobby-ui {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 10; pointer-events: none;
-            display: flex; flex-direction: column; justify-content: space-between; padding: 14px 20px;
+            position: absolute; inset: 0; z-index: 10; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 12px 18px;
         }
-        .pointer { pointer-events: auto; }
+        .ptr { pointer-events: auto; }
+
+        /* টপ বার */
         .top-bar { display: flex; justify-content: space-between; align-items: center; }
-        .profile {
+        .profile-card {
             display: flex; align-items: center; gap: 10px;
-            background: rgba(15, 23, 42, 0.82); padding: 6px 15px 6px 6px;
-            border-radius: 8px; border-left: 4px solid #f97316;
+            background: linear-gradient(90deg, rgba(15,23,42,0.9), rgba(30,41,59,0.7));
+            padding: 5px 14px 5px 5px; border-radius: 8px; border-left: 4px solid #f97316;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
         .avatar {
-            width: 36px; height: 36px; background: linear-gradient(45deg, #f97316, #ef4444);
-            border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900;
+            width: 36px; height: 36px; border-radius: 6px;
+            background: linear-gradient(135deg, #f97316, #dc2626);
+            display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px;
         }
-        .top-right { display: flex; gap: 10px; align-items: center; }
-        .curr-box {
-            background: rgba(15, 23, 42, 0.85); padding: 6px 14px; border-radius: 20px;
-            font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.15);
+        .top-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+        .badge {
+            background: rgba(15, 23, 42, 0.88); padding: 5px 12px; border-radius: 20px;
+            font-size: 12px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);
         }
-        .sound-btn {
+        .ctrl-pill {
             background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8;
-            padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer;
+            padding: 5px 11px; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer;
         }
-        .sound-btn.muted { border-color: #ef4444; color: #ef4444; }
+        .ctrl-pill.orange { border-color: #f97316; color: #fb923c; }
 
-        .left-panel { display: flex; flex-direction: column; gap: 10px; width: 135px; }
-        .card-btn {
-            background: linear-gradient(135deg, #f97316, #dc2626); padding: 10px;
-            border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        /* বাম পাশের ইভেন্ট ও কাস্টমাইজেশন */
+        .left-col { display: flex; flex-direction: column; gap: 10px; width: 155px; }
+        .rg-event-banner {
+            background: linear-gradient(135deg, #1e1b4b, #701a75, #be123c);
+            border: 2px solid #facc15; border-radius: 10px; padding: 8px 10px;
+            cursor: pointer; box-shadow: 0 0 18px rgba(250, 204, 21, 0.45);
+            animation: pulseGlow 2s infinite alternate;
         }
-
-        .bottom-bar { display: flex; justify-content: space-between; align-items: flex-end; }
-        .menu-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-        .m-btn {
+        @keyframes pulseGlow {
+            from { box-shadow: 0 0 10px rgba(250, 204, 21, 0.4); }
+            to { box-shadow: 0 0 22px rgba(249, 115, 22, 0.85); }
+        }
+        .rg-logo-text {
+            font-size: 14px; font-weight: 900; letter-spacing: 0.5px;
+            background: linear-gradient(90deg, #fef08a, #f97316);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .side-btn {
             background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.25);
-            color: white; padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;
+            padding: 8px 10px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: space-between;
         }
-        .m-btn.active { background: #f97316; color: white; border-color: #f97316; }
-        .start-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-        .mode-tag {
-            background: rgba(15, 23, 42, 0.85); padding: 5px 14px; border-radius: 5px;
-            font-size: 12px; color: #facc15; border: 1px solid #facc15; font-weight: bold;
+
+        /* বটম বার */
+        .bottom-bar { display: flex; justify-content: space-between; align-items: flex-end; }
+        .nav-tabs { display: flex; gap: 8px; }
+        .tab-btn {
+            background: rgba(15, 23, 42, 0.88); border: 1px solid rgba(255,255,255,0.2);
+            color: white; padding: 9px 15px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;
+        }
+        .tab-btn.active { background: #f97316; border-color: #f97316; }
+        .start-box { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .mode-pill {
+            background: rgba(15, 23, 42, 0.9); border: 1px solid #facc15; color: #facc15;
+            padding: 4px 12px; border-radius: 5px; font-size: 11px; font-weight: bold;
         }
         .start-btn {
-            background: linear-gradient(90deg, #facc15, #f97316); color: #0f172a;
-            border: none; padding: 14px 46px; font-size: 22px; font-weight: 900;
-            border-radius: 8px; cursor: pointer; box-shadow: 0 0 22px rgba(249, 115, 22, 0.7);
+            background: linear-gradient(90deg, #facc15, #f97316); color: #090d16;
+            border: none; padding: 12px 44px; font-size: 20px; font-weight: 900;
+            border-radius: 8px; cursor: pointer; box-shadow: 0 0 20px rgba(249, 115, 22, 0.7);
+        }
+
+        /* RG GAMER 2.0 ইভেন্ট পপআপ মডাল */
+        #event-modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+            z-index: 50; align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-card {
+            background: linear-gradient(145deg, #0f172a, #1e1b4b);
+            border: 2px solid #facc15; border-radius: 14px; width: 100%; max-width: 420px;
+            padding: 20px; text-align: center; box-shadow: 0 0 35px rgba(250, 204, 21, 0.4);
+        }
+        .rg-emblem {
+            display: inline-block; padding: 8px 20px; border-radius: 8px;
+            background: linear-gradient(90deg, #dc2626, #f97316);
+            border: 2px solid #fef08a; font-size: 22px; font-weight: 900;
+            letter-spacing: 1px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(220,38,38,0.6);
+        }
+        .reward-grid { display: flex; gap: 10px; justify-content: center; margin: 15px 0; }
+        .reward-item {
+            background: rgba(255,255,255,0.08); border: 1px solid #38bdf8;
+            padding: 10px; border-radius: 8px; flex: 1; font-size: 12px; font-weight: bold;
         }
 
         /* ম্যাচ UI */
         #match-ui {
-            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 20; pointer-events: none;
+            display: none; position: absolute; inset: 0; z-index: 20; pointer-events: none;
         }
-        .match-top {
-            display: flex; justify-content: space-between; padding: 12px 20px; align-items: center;
+        .match-hud {
+            display: flex; justify-content: space-between; padding: 12px 18px; align-items: center;
         }
-        .stat-pill {
-            background: rgba(0, 0, 0, 0.65); padding: 7px 14px; border-radius: 6px;
-            font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.15);
+        .hud-pill {
+            background: rgba(0, 0, 0, 0.65); padding: 6px 14px; border-radius: 6px;
+            font-size: 13px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);
         }
-        .hp-bar-wrap {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: 240px; text-align: center;
-        }
-        .hp-bg { width: 100%; height: 12px; background: rgba(0,0,0,0.7); border-radius: 6px; overflow: hidden; border: 1px solid #fff; }
-        #hp-fill { width: 100%; height: 100%; background: #22c55e; transition: 0.2s; }
         .crosshair {
-            position: absolute; top: 50%; left: 50%; width: 22px; height: 22px;
+            position: absolute; top: 46%; left: 50%; width: 24px; height: 24px;
             transform: translate(-50%, -50%); border: 2px solid rgba(255, 255, 255, 0.85);
-            border-radius: 50%; pointer-events: none;
+            border-radius: 50%;
         }
         .crosshair::after {
-            content: ''; position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+            content: ''; position: absolute; top: 50%; left: 50%; width: 5px; height: 5px;
             background: #ef4444; transform: translate(-50%, -50%); border-radius: 50%;
         }
+        .hp-container {
+            position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+            width: 220px; text-align: center;
+        }
+        .hp-bar { width: 100%; height: 11px; background: rgba(0,0,0,0.75); border-radius: 6px; overflow: hidden; border: 1px solid #fff; }
+        #hp-fill { width: 100%; height: 100%; background: #22c55e; transition: 0.15s; }
 
-        #joystick-zone {
-            position: absolute; bottom: 25px; left: 25px; width: 120px; height: 120px;
-            background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.3);
+        /* কন্ট্রোল */
+        #joy-base {
+            position: absolute; bottom: 22px; left: 22px; width: 110px; height: 110px;
+            background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.35);
             border-radius: 50%; pointer-events: auto; touch-action: none;
         }
-        #joystick-knob {
-            position: absolute; top: 35px; left: 35px; width: 50px; height: 50px;
-            background: rgba(249, 115, 22, 0.85); border-radius: 50%;
+        #joy-stick {
+            position: absolute; top: 32px; left: 32px; width: 46px; height: 46px;
+            background: rgba(249, 115, 22, 0.9); border-radius: 50%;
         }
-        .action-btns {
-            position: absolute; bottom: 25px; right: 25px; display: flex; gap: 15px; align-items: flex-end;
-            pointer-events: auto;
+        .right-btns {
+            position: absolute; bottom: 22px; right: 22px; display: flex; gap: 14px; align-items: flex-end; pointer-events: auto;
         }
-        .act-btn {
-            width: 56px; height: 56px; border-radius: 50%; background: rgba(15, 23, 42, 0.75);
-            border: 2px solid rgba(255,255,255,0.4); color: white; font-weight: bold; font-size: 12px;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        .small-act {
+            width: 54px; height: 54px; border-radius: 50%; background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(255,255,255,0.45); color: white; font-size: 11px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
         }
-        .fire-btn {
-            width: 78px; height: 78px; border-radius: 50%; background: rgba(239, 68, 68, 0.88);
-            border: 3px solid #fca5a5; color: white; font-weight: 900; font-size: 15px;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        .fire-circle {
+            width: 76px; height: 76px; border-radius: 50%; background: rgba(239, 68, 68, 0.9);
+            border: 3px solid #fecaca; color: white; font-size: 15px; font-weight: 900;
+            display: flex; align-items: center; justify-content: center;
         }
+
+        /* এন্ড স্ক্রিন */
         #end-screen {
-            display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.85);
-            z-index: 30; flex-direction: column; align-items: center; justify-content: center; gap: 15px;
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+            z-index: 40; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container"></div>
+    <canvas id="gameCanvas"></canvas>
 
     <!-- লবি UI -->
     <div id="lobby-ui">
         <div class="top-bar">
-            <div class="profile pointer">
-                <div class="avatar">FF</div>
+            <div class="profile-card ptr">
+                <div class="avatar">RG</div>
                 <div>
-                    <div style="font-size:13px; font-weight:bold;">FF_LEGEND</div>
-                    <div style="font-size:11px; color:#fb923c;">LVL 65 • HEROIC</div>
+                    <div style="font-size:13px; font-weight:900;">RG_GAMER_PRO</div>
+                    <div style="font-size:10px; color:#facc15;">LVL 70 • GRANDMASTER</div>
                 </div>
             </div>
-            <div class="top-right pointer">
-                <div class="curr-box">🪙 <span id="coin-txt">32,500</span></div>
-                <div class="curr-box">💎 <span id="dia-txt">1,250</span></div>
-                <button class="sound-btn" id="sound-toggle" onclick="toggleSound()">🔊 SOUND ON</button>
+            <div class="top-right ptr">
+                <div class="badge">🪙 <span id="coins">45,000</span></div>
+                <div class="badge">💎 <span id="diamonds">1,500</span></div>
+                <button class="ctrl-pill" id="snd-btn" onclick="toggleSound()">🔊 ON</button>
+                <button class="ctrl-pill orange" onclick="goFullScreen()">⛶ FULLSCREEN</button>
             </div>
         </div>
 
-        <div class="left-panel pointer">
-            <div class="card-btn" onclick="cycleOutfit()">👕 FF OUTFIT<br><span id="outfit-label" style="font-size:10px;color:#fef08a">CRIMSON HOODIE</span></div>
-            <div class="card-btn" style="background:linear-gradient(135deg,#0284c7,#1d4ed8)" onclick="cycleWeapon()">🔫 SWITCH GUN<br><span id="gun-name" style="font-size:10px;color:#bae6fd">AK47</span></div>
+        <div class="left-col ptr">
+            <!-- RG GAMER 2.0 EVENT LOGO -->
+            <div class="rg-event-banner" onclick="openEvent()">
+                <div style="font-size:9px; color:#fef08a; font-weight:bold;">🔥 SPECIAL EVENT</div>
+                <div class="rg-logo-text">RG GAMER 2.0</div>
+                <div style="font-size:10px; color:#e2e8f0; margin-top:2px;">Tap for Free Bundle!</div>
+            </div>
+
+            <div class="side-btn" onclick="nextOutfit()">
+                <span>👕 OUTFIT</span>
+                <span id="outfit-txt" style="color:#38bdf8;">CRIMSON</span>
+            </div>
+            <div class="side-btn" onclick="nextWeapon()">
+                <span>🔫 GUN</span>
+                <span id="gun-txt" style="color:#facc15;">AK47</span>
+            </div>
         </div>
 
         <div class="bottom-bar">
-            <div class="menu-btns pointer">
-                <button class="m-btn active">LOBBY</button>
-                <button class="m-btn" onclick="cycleOutfit()">CHARACTER</button>
-                <button class="m-btn" onclick="cycleWeapon()">WEAPON</button>
+            <div class="nav-tabs ptr">
+                <button class="tab-btn active">LOBBY</button>
+                <button class="tab-btn" onclick="nextOutfit()">CHARACTER</button>
+                <button class="tab-btn" onclick="openEvent()">EVENT</button>
             </div>
-            <div class="start-wrap pointer">
-                <div class="mode-tag">BR-RANKED • BERMUDA 3D</div>
+            <div class="start-box ptr">
+                <div class="mode-pill">BR-RANKED • BERMUDA 3D</div>
                 <button class="start-btn" onclick="startMatch()">START</button>
             </div>
         </div>
     </div>
 
-    <!-- ম্যাচ UI -->
-    <div id="match-ui">
-        <div class="match-top">
-            <div class="stat-pill">ALIVE: <span id="alive-count" style="color:#facc15">6</span> | KILLS: <span id="kill-count" style="color:#ef4444">0</span></div>
-            <div class="stat-pill">🔫 <span id="hud-gun">AK47</span> | AMMO: <span id="ammo-count">30</span>/∞</div>
-            <button class="m-btn pointer" style="background:#ef4444; border:none;" onclick="backToLobby()">EXIT</button>
-        </div>
-
-        <div class="crosshair"></div>
-
-        <div class="hp-bar-wrap">
-            <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">HP <span id="hp-text">100</span>/100</div>
-            <div class="hp-bg"><div id="hp-fill"></div></div>
-        </div>
-
-        <div id="joystick-zone"><div id="joystick-knob"></div></div>
-
-        <div class="action-btns">
-            <div class="act-btn" onclick="toggleScope()">SCOPE</div>
-            <div class="act-btn" onclick="jumpPlayer()">JUMP</div>
-            <div class="fire-btn" ontouchstart="fireBullet()" onclick="fireBullet()">FIRE</div>
+    <!-- RG GAMER 2.0 ইভেন্ট পপআপ -->
+    <div id="event-modal">
+        <div class="modal-card">
+            <div class="rg-emblem">⚡ RG GAMER 2.0 ⚡</div>
+            <p style="font-size:13px; color:#cbd5e1;">Welcome to the Official RG GAMER 2.0 Mega Event! Claim your exclusive VIP Bundle & Diamonds.</p>
+            <div class="reward-grid">
+                <div class="reward-item">💎 +500<br>DIAMONDS</div>
+                <div class="reward-item" style="border-color:#facc15;">👑 RG GOLD<br>BUNDLE</div>
+            </div>
+            <button class="start-btn" style="width:100%; font-size:16px; padding:12px;" id="claim-btn" onclick="claimEventReward()">CLAIM REWARD</button>
+            <button class="tab-btn" style="margin-top:10px; width:100%;" onclick="closeEvent()">CLOSE</button>
         </div>
     </div>
 
-    <!-- ম্যাচ শেষ স্ক্রিন -->
+    <!-- ম্যাচ UI -->
+    <div id="match-ui">
+        <div class="match-hud">
+            <div class="hud-pill">ALIVE: <span id="alive-num" style="color:#facc15;">6</span> | KILLS: <span id="kill-num" style="color:#ef4444;">0</span></div>
+            <div class="hud-pill">🔫 <span id="hud-gun">AK47</span></div>
+            <button class="tab-btn ptr" style="background:#ef4444; border:none;" onclick="toLobby()">EXIT</button>
+        </div>
+        <div class="crosshair"></div>
+        <div class="hp-container">
+            <div style="font-size:11px; font-weight:bold; margin-bottom:3px;">HP <span id="hp-val">100</span>/100</div>
+            <div class="hp-bar"><div id="hp-fill"></div></div>
+        </div>
+        <div id="joy-base"><div id="joy-stick"></div></div>
+        <div class="right-btns">
+            <div class="small-act" onclick="toggleScope()">SCOPE</div>
+            <div class="small-act" onclick="doJump()">JUMP</div>
+            <div class="fire-circle" ontouchstart="shoot()" onclick="shoot()">FIRE</div>
+        </div>
+    </div>
+
+    <!-- এন্ড স্ক্রিন -->
     <div id="end-screen">
-        <h1 id="end-title" style="font-size: 44px; color: #facc15; text-shadow: 0 0 20px #f97316;">BOOYAH!</h1>
-        <p id="end-stats" style="font-size: 18px;">Kills: 0</p>
-        <button class="start-btn" onclick="backToLobby()">BACK TO LOBBY</button>
+        <h1 id="end-title" style="font-size:44px; color:#facc15; text-shadow:0 0 20px #f97316;">BOOYAH!</h1>
+        <p id="end-sub" style="font-size:16px;">Kills: 5</p>
+        <button class="start-btn" onclick="toLobby()">BACK TO LOBBY</button>
     </div>
 
     <script>
-        // --- Web Audio সাউন্ড ইঞ্জিন ---
-        let audioCtx = null;
-        let soundEnabled = true;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // ফুলস্ক্রিন ফাংশন
+        function goFullScreen() {
+            playBeep(650, 0.08);
+            const el = document.documentElement;
+            if (!document.fullscreenElement) {
+                if (el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+                else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
             }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+        }
+
+        // অফলাইন Web Audio সাউন্ড সিস্টেম
+        let audioCtx = null;
+        let soundOn = true;
+
+        function initSound() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
         function toggleSound() {
-            initAudio();
-            soundEnabled = !soundEnabled;
-            const btn = document.getElementById('sound-toggle');
-            btn.innerText = soundEnabled ? '🔊 SOUND ON' : '🔇 MUTED';
-            btn.classList.toggle('muted', !soundEnabled);
-            if (soundEnabled) playClickSound();
+            initSound();
+            soundOn = !soundOn;
+            document.getElementById('snd-btn').innerText = soundOn ? '🔊 ON' : '🔇 OFF';
+            if (soundOn) playBeep(700, 0.07);
         }
 
-        function playClickSound() {
-            if (!soundEnabled) return;
-            initAudio();
+        function playBeep(freq, dur, type = 'sine') {
+            if (!soundOn) return;
+            initSound();
             const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(720, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(420, audioCtx.currentTime + 0.07);
-            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.07); 
+            const g = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(freq * 0.5, audioCtx.currentTime + dur);
+            g.gain.setValueAtTime(0.16, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + dur);
+        }
+
+        function playGunAudio(isSniper) {
+            if (!soundOn) return;
+            initSound();
+            const dur = isSniper ? 0.32 : 0.13;
+            const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * dur, audioCtx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * (isSniper ? 0.08 : 0.03)));
+            }
+            const src = audioCtx.createBufferSource();
+            src.buffer = buf;
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(isSniper ? 0.45 : 0.25, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+            src.connect(g); g.connect(audioCtx.destination);
+            src.start();
+        }
+
+        function playBooyah() {
+            if (!soundOn) return;
+            [523, 659, 784, 1046].forEach((f, i) => {
+                setTimeout(() => playBeep(f, 0.28, 'triangle'), i * 110);
+            });
+        }
+
+        // ক্যারেক্টার আউটফিট ও গান
+        const outfits = [
+            { name: 'CRIMSON', jacket: '#dc2626', stripe: '#facc15', pants: '#0f172a', visor: '#38bdf8' },
+            { name: 'CYBER BLUE', jacket: '#0284c7', stripe: '#38bdf8', pants: '#1e293b', visor: '#facc15' },
+            { name: 'RG GOLD', jacket: '#eab308', stripe: '#dc2626', pants: '#111827', visor: '#ef4444' },
+            { name: 'VENOM', jacket: '#7e22ce', stripe: '#4ade80', pants: '#090d16', visor: '#4ade80' }
+        ];
+        let outfitIdx = 0;
+        let eventClaimed = false;
+
+        const guns = [
+            { name: 'AK47', dmg: 35, speed: 22, sniper: false },
+            { name: 'AWM', dmg: 100, speed: 35, sniper: true }
+        ];
+        let gunIdx = 0;
+
+        function nextOutfit() {
+            playBeep(680, 0.07);
+            outfitIdx = (outfitIdx + 1) % outfits.length;
+            document.getElementById('outfit-txt').innerText = outfits[outfitIdx].name;
+        }
+
+        function nextWeapon() {
+            playBeep(680, 0.07);
+            gunIdx = (gunIdx + 1) % guns.length;
+            document.getElementById('gun-txt').innerText = guns[gunIdx].name;
+            document.getElementById('hud-gun').innerText = guns[gunIdx].name;
+        }
+
+        // ইভেন্ট ফাংশন
+        function openEvent() {
+            playBeep(750, 0.09);
+            document.getElementById('event-modal').style.display = 'flex';
+        }
+        function closeEvent() {
+            playBeep(500, 0.07);
+            document.getElementById('event-modal').style.display = 'none';
+        }
+        function claimEventReward() {
+            if (eventClaimed) return;
+            eventClaimed = true;
+            playBooyah();
+            const d = document.getElementById('diamonds');
+            d.innerText = (parseInt(d.innerText.replace(',', '')) + 500).toLocaleString();
+            outfitIdx = 2; // RG GOLD আনলক ও ইকুইপ
+            document.getElementById('outfit-txt').innerText = 'RG GOLD';
+            const btn = document.getElementById('claim-btn');
+            btn.innerText = 'CLAIMED ✔';
+            btn.style.background = '#22c55e';
+        }
+
+        // --- কাস্টম 3D প্রজেকশন ও রেন্ডারিং ইঞ্জিন (Zero External Dependency) ---
+        let state = 'LOBBY';
+        let lobbyAngle = 0;
+        let dragging = false, lastX = 0;
+
+        window.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; });
+        window.addEventListener('pointerup', () => dragging = false);
+        window.addEventListener('pointermove', e => {
+            if (!dragging) return;
+            const dx = e.clientX - lastX;
+            lastX = e.clientX;
+            if (state === 'LOBBY') lobbyAngle += dx * 0.015;
+            else if (state === 'MATCH') camYaw -= dx * 0.008;
+        });
+
+        // Free Fire স্টাইল 3D ক্যারেক্টার ড্রয়ার
+        function drawFFCharacter(cx, cy, scale, angle, style, walkPhase, isEnemy = false) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(scale, scale);
+
+            const dirX = Math.sin(angle);
+            const swing = Math.sin(walkPhase) * 14;
+
+            // গ্রাউন্ড শ্যাডো
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
+            ctx.beginPath();
+            ctx.ellipse(0, 95, 42, 11, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // বাম ও ডান পা (মুভিং অ্যানিমেশনসহ)
+            ctx.fillStyle = isEnemy ? '#1f2937' : style.pants;
+            ctx.fillRect(-18, 25 - swing * 0.4, 14, 62);
+            ctx.fillRect(4, 25 + swing * 0.4, 14, 62);
+
+            // স্টাইলিশ স্নিকার্স
+            ctx.fillStyle = isEnemy ? '#ef4444' : '#ffffff';
+            ctx.fillRect(-20, 82 - swing * 0.4, 17, 9);
+            ctx.fillRect(3, 82 + swing * 0.4, 17, 9);
+
+            // বাম হাত
+            ctx.fillStyle = isEnemy ? '#111827' : style.jacket;
+            ctx.fillRect(-30, -32 + swing * 0.5, 11, 52);
+
+            // টর্সো / হুডি জ্যাকেট
+            ctx.beginPath();
+            ctx.roundRect(-22, -38, 44, 68, 8);
+            ctx.fill();
+
+            // জ্যাকেটের নিয়ন স্ট্রাইপ
+            ctx.fillStyle = isEnemy ? '#ef4444' : style.stripe;
+            ctx.fillRect(-4 + dirX * 8, -36, 8, 64);
+
+            // ডান হাত ও বন্দুক
+            ctx.fillStyle = isEnemy ? '#111827' : style.jacket;
+            ctx.fillRect(19, -32 - swing * 0.3, 11, 46);
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(14 + dirX * 10, -8, 36, 9); // গান ব্যারেল
+            ctx.fillStyle = isEnemy ? '#ef4444' : style.stripe;
+            ctx.fillRect(28 + dirX * 10, -8, 12, 4);
+
+            // মাথা
+            ctx.fillStyle = isEnemy ? '#fca5a5' : '#fed7aa';
+            ctx.beginPath();
+            ctx.arc(dirX * 3, -58, 18, 0, Math.PI * 2);
+            ctx.fill();
+
+            // চুল / স্পাইকি হেয়ার
+            ctx.fillStyle = isEnemy ? '#7f1d1d' : '#0f172a';
+            ctx.beginPath();
+            ctx.arc(dirX * 2, -63, 19, Math.PI, 0);
+            ctx.fill();
+
+            // Free Fire স্টাইল ভাইজর চশমা ও হেডফোন
+            ctx.fillStyle = isEnemy ? '#ff0000' : style.visor;
+            ctx.fillRect(-12 + dirX * 7, -61, 24, 6);
+            ctx.fillStyle = isEnemy ? '#ef4444' : style.stripe;
+            ctx.fillRect(-21, -65, 5, 14);
+            ctx.fillRect(16, -65, 5, 14);
+
+            ctx.restore();
+        }
+
+        // সুন্দর লবি রেন্ডারিং
+        let timeTick = 0;
+        function drawLobby() {
+            timeTick += 0.04;
+            const w = canvas.width, h = canvas.height;
+
+            // আকাশ ও ব্যাকগ্রাউন্ড গ্রেডিয়েন্ট
+            const bg = ctx.createLinearGradient(0, 0, 0, h);
+            bg.addColorStop(0, '#0f172a');
+            bg.addColorStop(0.5, '#1e1b4b');
+            bg.addColorStop(1, '#090d16');
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, w, h);
+
+            // প্যানোরামিক লবি উইন্ডো ও সিটি স্কাইলাইন
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(w * 0.16, h * 0.12, w * 0.68, h * 0.62, 45);
+            ctx.clip();
+
+            const sky = ctx.createLinearGradient(0, h * 0.12, 0, h * 0.74);
+            sky.addColorStop(0, '#0284c7');
+            sky.addColorStop(0.6, '#38bdf8');
+            sky.addColorStop(1, '#bae6fd');
+            ctx.fillStyle = sky;
+            ctx.fillRect(w * 0.16, h * 0.12, w * 0.68, h * 0.62);
+
+            // শহরের বিল্ডিং সিলুয়েট
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.45)';
+            for (let i = 0; i < 14; i++) {
+                const bx = w * 0.16 + i * (w * 0.052);
+                const bh = 60 + (i % 4) * 35;
+                ctx.fillRect(bx, h * 0.74 - bh, w * 0.045, bh);
+            }
+            ctx.restore();
+
+            // উইন্ডো বর্ডার
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.roundRect(w * 0.16, h * 0.12, w * 0.68, h * 0.62, 45);
+            ctx.stroke();
+
+            // হোলোগ্রাফিক প্ল্যাটফর্ম রিং
+            const cx = w / 2, cy = h * 0.56;
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + 95, 95 + Math.sin(timeTick) * 4, 24, 0, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + 95, 72, 18, 0, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // ক্যারেক্টার ড্র
+            drawFFCharacter(cx, cy, Math.min(w, h) / 360, lobbyAngle, outfits[outfitIdx], 0);
+        }
+
+        // --- 3D পার্সপেক্টিভ ম্যাচ ইঞ্জিন ---
+        let player = { x: 0, z: 0, y: 0, vy: 0, hp: 100 };
+        let camYaw = 0, isScoped = false, kills = 0;
+        let enemies = [], bullets = [], trees = [];
+        let moveF = 0, moveR = 0, walkPhase = 0;
+
+        // জয়স্টিক কন্ট্রোল
+        const joyBase = document.getElementById('joy-base');
+        const joyStick = document.getElementById('joy-stick');
+        joyBase.addEventListener('touchmove', e => {
+            e.stopPropagation();
+            const r = joyBase.getBoundingClientRect();
+            const t = e.touches[0];
+            let dx = t.clientX - (r.left + 55);
+            let dy = t.clientY - (r.top + 55);
+            const dist = Math.min(35, Math.hypot(dx, dy));
+            const ang = Math.atan2(dy, dx);
+            joyStick.style.transform = `translate(${Math.cos(ang)*dist}px, ${Math.sin(ang)*dist}px)`;
+            moveR = (Math.cos(ang) * dist) / 35;
+            moveF = -(Math.sin(ang) * dist) / 35;
+        });
+        joyBase.addEventListener('touchend', () => {
+            joyStick.style.transform = 'translate(0,0)';
+            moveF = 0; moveR = 0;
+        });
+
+        function startMatch() {
+            playBeep(800, 0.1);
+            state = 'MATCH';
+            document.getElementById('lobby-ui').style.display = 'none';
+            document.getElementById('match-ui').style.display = 'block';
+            document.getElementById('end-screen').style.display = 'none';
+
+            player = { x: 0, z: 0, y: 0, vy: 0, hp: 100 };
+            camYaw = 0; kills = 0; isScoped = false;
+            bullets = []; enemies = []; trees = [];
+
+            for (let i = 0; i < 30; i++) {
+                trees.push({
+                    x: (Math.random() - 0.5) * 900,
+                    z: (Math.random() - 0.5) * 900,
+                    isHouse: i % 4 === 0
+                });
+            }
+            for (let i = 0; i < 5; i++) {
+                enemies.push({
+                    x: (Math.random() - 0.5) * 500,
+                    z: (Math.random() - 0.5) * 500,
+                    hp: 100, timer: Math.random() * 80, walk: 0
+                });
+            }
+            updateMatchHUD();
+        }
+
+        function toLobby() {
+            playBeep(550, 0.08);
+            state = 'LOBBY';
+            document.getElementById('lobby-ui').style.display = 'flex';
+            document.getElementById('match-ui').style.display = 'none';
+            document.getElementById('end-screen').style.display = 'none';
+        }
+
+        function doJump() {
+            if (player.y === 0) {
+                player.vy = 11;
+                playBeep(320, 0.12);
+            }
+        }
+
+        function toggleScope() {
+            playBeep(600, 0.06);
+            isScoped = !isScoped;
+        }
+
+        function shoot() {
+            if (state !== 'MATCH') return;
+            const g = guns[gunIdx];
+            playGunAudio(g.sniper);
+            bullets.push({
+                x: player.x, z: player.z,
+                vx: Math.sin(camYaw) * g.speed,
+                vz: Math.cos(camYaw) * g.speed,
+                dmg: g.dmg, fromPlayer: true, life: 55
+            });
+        }
+
+        function updateMatchHUD() {
+            document.getElementById('hp-val').innerText = Math.max(0, Math.floor(player.hp));
+            document.getElementById('hp-fill').style.width = Math.max(0, player.hp) + '%';
+            document.getElementById('kill-num').innerText = kills;
+            document.getElementById('alive-num').innerText = enemies.length + 1;
+        }
+
+        function finishMatch(won) {
+            state = 'END';
+            document.getElementById('match-ui').style.display = 'none';
+            document.getElementById('end-screen').style.display = 'flex';
+            document.getElementById('end-title').innerText = won ? 'BOOYAH!' : 'ELIMINATED';
+            document.getElementById('end-title').style.color = won ? '#facc15' : '#ef4444';
+            document.getElementById('end-sub').innerText = `Kills: ${kills} | +300 Coins`;
+            if (won) {
+                playBooyah();
+                const c = document.getElementById('coins');
+                c.innerText = (parseInt(c.innerText.replace(',', '')) + 300).toLocaleString();
+            }
+        }
+
+        // 3D পয়েন্ট প্রজেকশন ফাংশন
+        function project3D(wx, wz, wy = 0) {
+            const dx = wx - player.x;
+            const dz = wz - player.z;
+            const cos = Math.cos(-camYaw), sin = Math.sin(-camYaw);
+            const rx = dx * cos - dz * sin;
+            const rz = dx * sin + dz * cos + 140; // ক্যামেরা ডিস্ট্যান্স
+
+            if (rz <= 10) return null;
+            const fov = isScoped ? 750 : 460;
+            const scale = fov / rz;
+            const sx = canvas.width / 2 + rx * scale;
+            const sy = canvas.height * 0.52 + (110 - wy) * scale;
+            return { sx, sy, scale, depth: rz };
+        }
+
+        function drawMatch() {
+            const w = canvas.width, h = canvas.height;
+            const horizon = h * 0.46;
+
+            // আকাশ ও সবুজ মাঠ
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(0, 0, w, horizon);
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(0, horizon, w, h - horizon);
+
+            // গ্রাউন্ড গ্রিড লাইন (গতি বোঝার জন্য)
+            ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+            ctx.lineWidth = 1;
+            const step = 80;
+            const startX = Math.floor((player.x - 500) / step) * step;
+            const startZ = Math.floor((player.z - 500) / step) * step;
+            for (let gx = startX; gx < player.x + 500; gx += step) {
+                const p1 = project3D(gx, player.z - 100);
+                const p2 = project3D(gx, player.z + 500);
+                if (p1 && p2) {
+                    ctx.beginPath(); ctx.moveTo(p1.sx, p1.sy); ctx.lineTo(p2.sx, p2.sy); ctx 
